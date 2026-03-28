@@ -71,7 +71,7 @@ The toggle takes effect immediately across all terminals (no restart needed). Wh
 The key environment variables:
 
 - `ANTHROPIC_BASE_URL` — points Claude Code at your vLLM server
-- `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN` — dummy values (vLLM doesn't need auth, but Claude Code requires these to be set)
+- `ANTHROPIC_API_KEY` — dummy value (vLLM doesn't need auth, but Claude Code requires it to be set). Do **not** also set `ANTHROPIC_AUTH_TOKEN` — having both causes a warning.
 - `ANTHROPIC_DEFAULT_OPUS_MODEL` / `ANTHROPIC_DEFAULT_SONNET_MODEL` / `ANTHROPIC_DEFAULT_HAIKU_MODEL` — your model's served name, used for all tiers
 
 ## vLLM server requirements

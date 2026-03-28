@@ -2,7 +2,14 @@
 set -euo pipefail
 
 # claude-local installer
-# Installs Claude Code CLI (if needed) and sets up local vLLM routing.
+#
+# What this does:
+#   1. Checks that the `claude` CLI is installed (installs it if not)
+#   2. Adds shell integration to .bashrc / .zshrc so `claude-local` and
+#      the `claude` wrapper are available in every new terminal
+#
+# It does NOT configure an endpoint. After install, run:
+#   claude-local config <endpoint> <model>
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_DIR="${CLAUDE_LOCAL_DIR:-$HOME/.config/claude-local}"
@@ -40,42 +47,10 @@ fi
 # ------------------------------------------------------------------
 # 2. Create config directory
 # ------------------------------------------------------------------
-info "setting up $CONFIG_DIR..."
 mkdir -p "$CONFIG_DIR"
 
 # ------------------------------------------------------------------
-# 3. Configure endpoint (interactive or from arguments)
-# ------------------------------------------------------------------
-ENDPOINT="${1:-}"
-MODEL="${2:-}"
-
-if [ -z "$ENDPOINT" ]; then
-  if [ -f "$CONFIG_DIR/config.env" ]; then
-    info "existing config found, keeping it"
-  else
-    printf "\n"
-    printf "${CYAN}vLLM endpoint URL${NC} (e.g. http://localhost:8000): "
-    read -r ENDPOINT
-    printf "${CYAN}Served model name${NC} (e.g. qwen3-8b): "
-    read -r MODEL
-  fi
-fi
-
-if [ -n "$ENDPOINT" ] && [ -n "$MODEL" ]; then
-  cat > "$CONFIG_DIR/config.env" <<EOF
-ANTHROPIC_BASE_URL=${ENDPOINT}
-ANTHROPIC_API_KEY=local
-ANTHROPIC_AUTH_TOKEN=local
-ANTHROPIC_DEFAULT_OPUS_MODEL=${MODEL}
-ANTHROPIC_DEFAULT_SONNET_MODEL=${MODEL}
-ANTHROPIC_DEFAULT_HAIKU_MODEL=${MODEL}
-CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1
-EOF
-  ok "config written to $CONFIG_DIR/config.env"
-fi
-
-# ------------------------------------------------------------------
-# 4. Add shell integration to .bashrc / .zshrc
+# 3. Add shell integration to .bashrc / .zshrc
 # ------------------------------------------------------------------
 SOURCE_LINE="[ -f \"$SHELL_INTEGRATION\" ] && . \"$SHELL_INTEGRATION\""
 
@@ -95,32 +70,27 @@ info "adding shell integration..."
 add_to_shell "$HOME/.bashrc"
 add_to_shell "$HOME/.zshrc"
 
-# If neither exists, create .bashrc entry
 if [ ! -f "$HOME/.bashrc" ] && [ ! -f "$HOME/.zshrc" ]; then
   printf '\n# claude-local: route claude to local vLLM\n%s\n' "$SOURCE_LINE" >> "$HOME/.bashrc"
   ok "created $HOME/.bashrc with claude-local integration"
 fi
 
 # ------------------------------------------------------------------
-# 5. Enable routing by default
-# ------------------------------------------------------------------
-if [ -f "$CONFIG_DIR/config.env" ]; then
-  touch "$CONFIG_DIR/enabled"
-  ok "local routing enabled"
-fi
-
-# ------------------------------------------------------------------
-# 6. Done
+# 4. Done — tell the user what to do next
 # ------------------------------------------------------------------
 printf "\n"
-printf "${GREEN}Installation complete!${NC}\n"
+printf "${GREEN}Installed.${NC}\n"
 printf "\n"
-printf "Quick start:\n"
-printf "  source %s        # activate in current shell\n" "$SHELL_INTEGRATION"
-printf "  claude-local status              # check routing state\n"
-printf "  claude                           # uses local vLLM\n"
-printf "  claude-local off                 # switch to Anthropic cloud\n"
-printf "  claude                           # uses Anthropic cloud\n"
-printf "  claude-local on                  # switch back to local\n"
+printf "Activate in this shell:\n"
+printf "  source %s\n" "$SHELL_INTEGRATION"
 printf "\n"
-printf "Or open a new terminal -- it's already configured.\n"
+printf "Then configure your vLLM endpoint:\n"
+printf "  claude-local config <endpoint-url> <model-name>\n"
+printf "  claude-local on\n"
+printf "\n"
+printf "Example:\n"
+printf "  claude-local config http://localhost:8000 qwen3-8b\n"
+printf "  claude-local on\n"
+printf "  claude\n"
+printf "\n"
+printf "New terminals will have claude-local available automatically.\n"

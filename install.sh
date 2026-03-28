@@ -14,6 +14,29 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_DIR="${CLAUDE_LOCAL_DIR:-$HOME/.config/claude-local}"
 SHELL_INTEGRATION="$REPO_DIR/claude-local.sh"
+EXTRA_RC_FILES=()
+
+# Parse flags
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --rc) EXTRA_RC_FILES+=("$2"); shift 2 ;;
+    --rc=*) EXTRA_RC_FILES+=("${1#--rc=}"); shift ;;
+    -h|--help)
+      echo "usage: bash install.sh [--rc <file>]..."
+      echo ""
+      echo "options:"
+      echo "  --rc <file>   shell rc file to add integration to (repeatable)"
+      echo "                default: ~/.bashrc and ~/.zshrc"
+      echo ""
+      echo "examples:"
+      echo "  bash install.sh"
+      echo "  bash install.sh --rc ~/.bashrc_private"
+      echo "  bash install.sh --rc ~/.bashrc_private --rc ~/.zshrc"
+      exit 0
+      ;;
+    *) echo "unknown flag: $1 (try --help)"; exit 1 ;;
+  esac
+done
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -56,23 +79,29 @@ SOURCE_LINE="[ -f \"$SHELL_INTEGRATION\" ] && . \"$SHELL_INTEGRATION\""
 
 add_to_shell() {
   local rc="$1"
-  if [ -f "$rc" ]; then
-    if grep -qF "claude-local.sh" "$rc" 2>/dev/null; then
-      ok "$rc already has claude-local integration"
-    else
-      printf '\n# claude-local: route claude to local vLLM\n%s\n' "$SOURCE_LINE" >> "$rc"
-      ok "added to $rc"
-    fi
+  if grep -qF "claude-local.sh" "$rc" 2>/dev/null; then
+    ok "$rc already has claude-local integration"
+  else
+    printf '\n# claude-local: route claude to local vLLM\n%s\n' "$SOURCE_LINE" >> "$rc"
+    ok "added to $rc"
   fi
 }
 
 info "adding shell integration..."
-add_to_shell "$HOME/.bashrc"
-add_to_shell "$HOME/.zshrc"
-
-if [ ! -f "$HOME/.bashrc" ] && [ ! -f "$HOME/.zshrc" ]; then
-  printf '\n# claude-local: route claude to local vLLM\n%s\n' "$SOURCE_LINE" >> "$HOME/.bashrc"
-  ok "created $HOME/.bashrc with claude-local integration"
+if [ ${#EXTRA_RC_FILES[@]} -gt 0 ]; then
+  # User specified explicit rc files — use only those
+  for rc in "${EXTRA_RC_FILES[@]}"; do
+    add_to_shell "$rc"
+  done
+else
+  # Default: existing .bashrc and/or .zshrc
+  found=false
+  for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
+    [ -f "$rc" ] && { add_to_shell "$rc"; found=true; }
+  done
+  if [ "$found" = false ]; then
+    add_to_shell "$HOME/.bashrc"
+  fi
 fi
 
 # ------------------------------------------------------------------

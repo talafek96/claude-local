@@ -23,6 +23,14 @@ claude-local on
 claude
 ```
 
+Use `--rc` to target a custom shell rc file instead of the defaults:
+
+```bash
+bash install.sh --rc ~/.bashrc_private
+```
+
+You can pass `--rc` multiple times. When `--rc` is given, the defaults (`~/.bashrc`, `~/.zshrc`) are skipped.
+
 ## Configuration
 
 All configuration goes through `claude-local config`:
